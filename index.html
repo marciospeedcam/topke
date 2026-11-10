@@ -167,6 +167,7 @@ body.souTV #souTv{position:fixed;right:10px;bottom:10px;z-index:50;opacity:.55}
   <div class="top">
     <div class="brand">Top<b>Ke</b></div>
     <span class="sp"></span>
+    <button class="cast" id="btShareApp" aria-label="Compartilhar app">📤</button>
     <button class="cast" id="souTv" data-on="0">📺 Esta tela é a TV</button>
     <button class="cast" id="cast" aria-label="Enviar para a TV">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><path d="M12 15l5 6H7z"/></svg>
@@ -711,4 +712,21 @@ marcaTv();
 })();
 </script>
 
+<script>
+(function(){
+  var URL_APP="https://marciospeedcam.github.io/topke/";
+  function aviso(m){ try{ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('on'); setTimeout(function(){t.classList.remove('on')},2200); }catch(e){} }
+  function copiar(t){
+    if(navigator.clipboard&&navigator.clipboard.writeText) return navigator.clipboard.writeText(t).then(function(){return true},function(){return fallback(t)});
+    return Promise.resolve(fallback(t));
+  }
+  function fallback(t){ try{ var ta=document.createElement("textarea"); ta.value=t; ta.setAttribute("readonly",""); ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0,999); var ok=document.execCommand("copy"); ta.remove(); return ok; }catch(e){ return false; } }
+  var b=document.getElementById("btShareApp"); if(!b) return;
+  b.addEventListener("click",function(){
+    var data={title:"TopKe",text:"TopKe, o karaokê: abra no Safari e toque em Compartilhar > Adicionar à Tela de Início:",url:URL_APP};
+    if(navigator.share){ navigator.share(data).catch(function(e){ if(!e||e.name!=="AbortError") copiar(URL_APP).then(function(ok){aviso(ok?"Link copiado: cole no WhatsApp":URL_APP)}); }); return; }
+    copiar(URL_APP).then(function(ok){aviso(ok?"Link copiado: cole no WhatsApp":URL_APP)});
+  });
+})();
+</script>
 </body></html>
