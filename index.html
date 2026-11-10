@@ -1,0 +1,714 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>TopKe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Figtree:wght@400;600;800&display=swap">
+<style>
+/* App de celular: vídeo-karaokê no topo com botão de enviar para a TV (AirPlay/Chromecast) no canto; busca e fila embaixo. Tema único escuro. */
+:root{
+  --bg:#0b0d16; --panel:#141827; --line:#262c44; --fg:#f4f1ea; --muted:#9aa0b8;
+  --gold:#ffb43a; --blue:#3ea6ff;
+  --display:'Unbounded','Arial Black',system-ui,sans-serif;
+  --body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body>*{max-width:100%}
+#lib,#crumb,.crumb,.note{min-width:0;overflow-wrap:anywhere}
+.grid{width:100%}
+[hidden]{display:none!important}
+html,body{height:100%;overflow-x:hidden;max-width:100vw}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.app{max-width:640px;margin:0 auto;padding-block:10px 24px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:6px}
+.brand{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:.01em}
+.brand b{color:var(--blue);font-weight:800}
+.top .sp{flex:1}
+.cast{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:8px 12px;font-weight:700;font-size:13px}
+.cast svg{width:22px;height:22px}
+.cast[data-on="1"]{border-color:var(--blue);color:var(--blue)}
+.player{background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;max-width:100%;position:relative}
+.player video{width:100%;height:100%;display:block;background:#000}
+.player .empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted)}
+.ov{position:absolute;top:8px;right:8px;z-index:2;pointer-events:none;background:rgba(5,7,14,.72);border:1px solid rgba(255,180,58,.35);border-radius:10px;padding:6px 10px;font-size:11px;line-height:1.35;max-width:52%;color:#e9e6df}
+.ov h4{margin:0 0 2px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.ov ol{margin:0;padding-left:16px}
+.ov li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov li b{color:var(--gold)}
+.sing{position:absolute;top:8px;left:8px;z-index:2;pointer-events:none;background:rgba(5,7,14,.72);border-radius:10px;padding:5px 10px;font-size:12px;font-weight:800;color:var(--gold)}
+.vez{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none;background:rgba(5,7,14,.6);text-align:center;opacity:0;transition:opacity .4s}
+.vez.on{opacity:1}
+.vez div{font-family:var(--display);font-size:clamp(22px,6vw,56px);color:var(--gold);padding:0 16px}
+.vez span{display:block;font-family:var(--body);font-size:clamp(13px,2.6vw,22px);color:var(--fg);margin-top:6px}
+.tvbtn{position:absolute;bottom:52px;right:8px;z-index:2;border:0;border-radius:10px;padding:6px 10px;background:rgba(5,7,14,.72);color:var(--fg);font-weight:800;font-size:12px}
+body.tvmode{overflow:hidden}
+body.tvmode .player{position:fixed;inset:0;border-radius:0;aspect-ratio:auto;z-index:40}
+body.tvmode .ov{font-size:clamp(12px,1.8vw,20px);max-width:40%;top:14px;right:14px;padding:10px 14px}
+body.tvmode .ov h4{font-size:clamp(10px,1.3vw,15px)}
+body.tvmode .sing{font-size:clamp(13px,2vw,22px);top:14px;left:14px}
+.player .empty b{display:block;color:var(--fg);font-size:18px;margin-bottom:4px}
+.sync{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.sync b{color:var(--fg);min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.sync button{border:1px solid var(--line);background:transparent;border-radius:10px;padding:6px 12px;font-weight:800;color:var(--fg)}
+.now{display:flex;align-items:center;gap:10px}
+.now .t{flex:1;min-width:0}
+.now .t div{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now .t span{font-size:12px;color:var(--muted)}
+.btn{border:0;border-radius:999px;padding:11px 16px;font-weight:800;background:rgba(255,255,255,.1)}
+.btn.main{background:var(--gold);color:#1a1200}
+.tabs{display:flex;gap:8px}
+.tabs button{flex:1;border:1px solid var(--line);background:transparent;border-radius:12px;padding:10px;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--panel);border-color:var(--gold);color:var(--gold)}
+.search{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:#0e1120}
+.list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:2px}
+.row{display:flex;align-items:center;gap:10px;padding:8px;border-radius:12px}
+.row img{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:none}
+.row .t{flex:1;min-width:0}
+.row .t div{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t span{font-size:12px;color:var(--muted)}
+.row.playing .t div{color:var(--gold)}
+/* Pastas (álbuns) e músicas em grade: várias por linha */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;list-style:none;margin:10px 0 0;padding:0}
+.album{border:1px solid var(--line);background:var(--panel);border-radius:16px;padding:10px;text-align:left;display:flex;flex-direction:column;gap:6px;color:var(--fg)}
+.album img,.album .ph{width:100%;aspect-ratio:1;border-radius:12px;object-fit:cover;display:block}
+.album .ph{display:grid;place-items:center;background:linear-gradient(135deg,#3a2a10,#1b2340);font-family:var(--display);font-size:30px;color:var(--gold);text-align:center;line-height:1.1;padding:10px}
+.album b{font-size:15px}
+.album span{font-size:12px;color:var(--muted)}
+.tile{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.tile.playing{border-color:var(--gold)}
+.tile img{width:100%;aspect-ratio:1;border-radius:10px;object-fit:cover;display:block}
+.tile .tt{font-weight:800;font-size:14px;line-height:1.25;min-height:2.5em;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile.playing .tt{color:var(--gold)}
+.tile .du{font-size:12px;color:var(--muted)}
+.tile .bt{display:flex;gap:6px}
+.tile .bt .ic{flex:1;padding:8px 4px;text-align:center}
+.ytph{position:relative;overflow:hidden;width:100%;aspect-ratio:1;border-radius:10px;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;gap:4px;
+  background:radial-gradient(120% 90% at 20% 10%, hsl(var(--h) 70% 42%), hsl(calc(var(--h) + 40) 55% 14%) 70%)}
+/* Capa própria do iKARAOKE: um disco de vinil saindo da capa + título da música */
+.ytph::before{content:"";position:absolute;width:78%;aspect-ratio:1;right:-26%;top:8%;border-radius:50%;
+  background:radial-gradient(circle, hsl(var(--h) 80% 60%) 0 9%, #111 10% 12%, #1a1a1a 13% 100%),#111;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.04), inset 0 0 0 9px #161616, inset 0 0 0 11px rgba(255,255,255,.05), inset 0 0 0 18px #141414, inset 0 0 0 20px rgba(255,255,255,.05), 0 6px 18px rgba(0,0,0,.5)}
+.ytph::after{content:"🎤";position:absolute;left:12px;top:10px;font-size:20px;opacity:.9}
+.ytph span{position:relative;font-family:var(--display);color:#fff;font-size:16px;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,.6);max-width:80%}
+.ytph small{position:relative;color:hsl(var(--h) 90% 75%);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.album .ph{position:relative;overflow:hidden;background:radial-gradient(120% 90% at 20% 10%, hsl(var(--h) 70% 42%), hsl(calc(var(--h) + 40) 55% 14%) 70%);color:#fff;font-size:22px}
+.ic.yt{display:block;text-decoration:none;border-color:#ff4e45;color:#ff8a84}
+.ytH{margin:14px 0 2px;font-size:15px;color:#ff8a84}
+.ytAct{display:flex;gap:8px;margin-top:8px}
+#ytp{margin-top:12px}
+.ytv{aspect-ratio:16/9;background:#000;border-radius:16px;overflow:hidden}
+.ytv iframe{width:100%;height:100%;border:0;display:block}
+.yti{padding:10px 2px 0}
+.ytNow{font-weight:900;font-size:17px}
+.ytNow b{color:var(--gold)}
+.ytNextH{margin-top:8px;font-size:11px;letter-spacing:.08em;color:var(--gold);font-weight:800}
+.ytNext{margin:4px 0 0;padding-left:20px;font-size:14px}
+.ytNext li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ytNext b{color:var(--gold)}
+.ytBtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.ytBtns .btn{padding:8px 12px;text-decoration:none}
+#ytp.tv{position:fixed;inset:0;z-index:45;background:#000;margin:0;display:flex;flex-direction:column}
+#ytp.tv .ytv{border-radius:0;flex:1;aspect-ratio:auto}
+#ytp.tv .yti{padding:12px 16px}
+#ytp.tv .ytNow{font-size:24px}
+#ytp.tv .ytNext{font-size:19px}
+@media (orientation:landscape){#ytp.tv{flex-direction:row}#ytp.tv .ytv{flex:0 0 70%}#ytp.tv .yti{flex:1;overflow:auto;padding:18px}}
+.ytSend{flex:1;text-align:center;text-decoration:none;background:#c4302b;color:#fff}
+.ytSend[aria-disabled="true"]{opacity:.4;pointer-events:none}
+.row.sent{opacity:.5}
+.crumb button[data-back]{background:var(--gold);color:#1a1205;border-color:var(--gold);padding:10px 16px;font-size:15px}
+#toast{bottom:calc(84px + env(safe-area-inset-bottom))!important}
+#pS{padding-bottom:80px}
+.voltar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));z-index:30;background:var(--gold);color:#1a1205;border:0;border-radius:999px;padding:12px 22px;font-weight:800;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+body.tvmode .voltar{display:none!important}
+.load{position:fixed;inset:0;z-index:60;background:rgba(5,7,14,.82);display:grid;place-items:center;padding:24px}
+.load .box{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center;max-width:320px;width:100%}
+.load .spin{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,180,58,.2);border-top-color:var(--gold);margin:0 auto 14px;animation:gira 0.9s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+.load b{display:block;font-size:17px;margin-bottom:6px}
+.load span{color:var(--muted);font-size:14px}
+.rank{position:absolute;right:10px;top:8px;font-style:normal;font-weight:900;font-size:13px;background:var(--gold);color:#1a1205;border-radius:999px;padding:3px 8px;z-index:1}
+.btn.mk{width:100%;background:rgba(255,180,58,.12);border:1px solid var(--gold);color:var(--gold)}
+.crumb{display:flex;align-items:center;gap:10px;margin-top:10px}
+.crumb button{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 12px;font-weight:800;color:var(--fg)}
+.crumb b{font-size:17px}
+.crumb span{color:var(--muted);font-size:13px}
+.ic{border:1px solid var(--line);background:transparent;border-radius:10px;padding:8px 10px;font-weight:700;font-size:13px;white-space:nowrap}
+.ic.add{border-color:var(--blue);color:var(--blue)}
+.ic.x{color:var(--muted)}
+.qn{width:22px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
+.note{color:var(--muted);font-size:13px;line-height:1.5}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--blue);color:#001222;font-weight:800;padding:10px 16px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;max-width:calc(100% - 32px);text-align:center}
+.toast.on{opacity:1}
+dialog{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:16px;max-width:min(480px,calc(100% - 32px));padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin:0 0 8px}
+dialog ol{padding-left:20px;line-height:1.55;color:var(--muted)}
+#who .chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;max-height:40vh;overflow:auto}
+#who .chip{border:1px solid var(--line);background:#0e1120;border-radius:999px;padding:10px 14px;font-weight:700}
+#who .chip.new{border-color:var(--gold);color:var(--gold)}
+#who .acts{display:flex;gap:8px;justify-content:space-between;margin-top:8px}
+#who .song{color:var(--muted);font-size:13px;margin:0}
+.who{color:var(--gold);font-weight:700}
+#ytp.remoto .ytv,#ytp.remoto #ytTv,#ytp.remoto #ytOpen{display:none!important}
+#tvIdle{position:fixed;inset:0;z-index:44;display:grid;place-items:center;text-align:center;padding:24px;background:radial-gradient(90% 70% at 30% 20%,#2a2140,#0b0d16 70%)}
+#tvIdle ol{display:inline-block;text-align:left;font-size:clamp(16px,2.6vw,32px);margin:18px 0;padding-left:1.4em}
+#tvIdle ol b{color:var(--gold)}
+#tvGo{font-size:clamp(16px,2.4vw,28px);padding:14px 28px}
+body.souTV #souTv{position:fixed;right:10px;bottom:10px;z-index:50;opacity:.55}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="app">
+  <div class="top">
+    <div class="brand">Top<b>Ke</b></div>
+    <span class="sp"></span>
+    <button class="cast" id="souTv" data-on="0">📺 Esta tela é a TV</button>
+    <button class="cast" id="cast" aria-label="Enviar para a TV">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-1"/><path d="M12 15l5 6H7z"/></svg>
+      <span id="castTxt">TV</span>
+    </button>
+  </div>
+
+  <section id="ytp" hidden>
+    <div class="ytv"><iframe id="ytf" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen title="Player do YouTube"></iframe></div>
+    <div class="yti">
+      <div class="ytNow" id="ytNow"></div>
+      <div class="ytNextH">PRÓXIMOS</div>
+      <ol class="ytNext" id="ytNext"></ol>
+      <div id="ytSig" style="font-size:12px;margin-top:6px"></div>
+      <div class="ytBtns"><button class="btn" id="ytSkip">⏭ Próxima</button><button class="btn" id="ytTv">⛶ Modo TV</button><button class="btn" id="ytStop" aria-label="Parar">■</button><a class="btn" id="ytOpen" target="_blank" rel="noopener">YouTube</a></div>
+    </div>
+  </section>
+  <div class="player">
+    <video id="v" playsinline x-webkit-airplay="allow" preload="metadata"></video>
+    <audio id="au" preload="auto"></audio>
+    <div class="sing" id="sing" hidden></div>
+    <div class="ov" id="ov" hidden><h4>Próximos</h4><ol id="ovList"></ol></div>
+    <div class="vez" id="vez"><div><em id="vezT" style="font-style:normal"></em><span id="vezS"></span></div></div>
+    <button class="tvbtn" id="tvbtn" hidden>⛶ Modo TV</button>
+    <button class="empty" id="empty" style="border:0;background:transparent;width:100%"><div><b>▶ Toque em Cantar numa música</b>A lista está logo abaixo. Para levar à TV, use o botão TV no alto.</div></button>
+  </div>
+
+  <div class="sync" id="syncRow" hidden>
+    <span style="flex:1">🔊 Ajuste do som (Bluetooth)</span>
+    <button id="syncMinus" aria-label="Atrasar o som">−</button><b id="syncVal">0,0 s</b><button id="syncPlus" aria-label="Adiantar o som">+</button>
+  </div>
+  <div class="now">
+    <div class="t"><div id="nowT">Nada tocando</div><span id="nextT">Fila vazia</span></div>
+    <button class="btn" id="next" disabled>Próxima ⏭</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tabS" aria-selected="true">Músicas</button>
+    <button role="tab" id="tabQ" aria-selected="false">Fila (<span id="qc">0</span>)</button>
+  </div>
+  <div id="pS">
+    <input class="search" id="q" type="search" placeholder="Buscar música ou trecho da letra (em todas as pastas)" aria-label="Buscar música">
+    <div id="crumb"></div>
+    <ul class="grid" id="lib"></ul>
+  </div>
+  <div id="pQ" hidden>
+    <ul class="list" id="queue"></ul>
+    <div id="ytBox" hidden>
+      <h3 class="ytH">Fila</h3>
+      <ul class="list" id="ytq"></ul>
+      <div class="ytAct"><button class="btn ytSend" id="ytStart">▶ Começar a fila</button><button class="btn" id="ytClear">Limpar cantadas</button></div>
+      <p class="note" style="margin:6px 0 0">Quando uma música acaba, a próxima da fila começa sozinha. Para a TV: espelhe o iPhone (AirPlay) e toque em <b>⛶ Modo TV</b>.</p>
+    </div>
+    <p class="note" id="qEmpty">A fila está vazia. Em <b>Músicas</b>, toque em <b>+ Fila</b>. A música que está tocando não para.</p>
+  </div>
+</div>
+
+<dialog id="dlg">
+  <h3>Levar para a TV</h3>
+  <ol>
+    <li>O celular e a TV precisam estar <b>no mesmo Wi-Fi</b>.</li>
+    <li>Comece a tocar uma música.</li>
+    <li><b>iPhone:</b> no vídeo, toque no ícone de <b>AirPlay</b> (tela com triângulo) e escolha a TV. Se não aparecer, abra a <b>Central de Controle</b> → <b>Espelhar Tela</b> → escolha a TV.</li>
+    <li><b>Android:</b> no vídeo, toque nos três pontinhos → <b>Transmitir</b> e escolha a TV.</li>
+  </ol>
+  <p class="note">Depois de conectar, pode buscar e montar a fila à vontade: a TV continua tocando.</p>
+  <button class="btn main" id="dlgOk">Entendi</button>
+</dialog>
+<dialog id="who" aria-labelledby="whoH">
+  <h3 id="whoH">Quem vai cantar?</h3>
+  <p class="song" id="whoSong"></p>
+  <input class="search" id="whoQ" type="search" placeholder="Digite ou procure o nome" aria-label="Nome de quem vai cantar" autocomplete="off" style="margin-top:12px">
+  <div class="chips" id="whoList"></div>
+  <div class="acts"><button class="btn" id="whoNo">Sem nome</button><button class="btn" id="whoX">Cancelar</button></div>
+</dialog>
+<button class="voltar" id="voltar" hidden>‹ Voltar às pastas</button>
+<div class="load" id="load" hidden role="status" aria-live="polite"><div class="box"><div class="spin"></div><b id="loadT">Montando a pasta…</b><span id="loadS">Procurando as músicas mais conhecidas</span><button class="btn" id="loadX" style="margin-top:14px;width:100%">Cancelar</button></div></div>
+<div class="toast" id="toast"></div>
+<div id="tvIdle" hidden><div><div class="brand" style="font-size:clamp(40px,8vw,110px)">Top<b>Ke</b></div><p id="tvIdleS" style="font-size:clamp(16px,2.4vw,30px);color:var(--muted);margin:10px 0 0"></p><ol id="tvIdleL"></ol><button class="btn main" id="tvGo">▶ Começar</button></div></div>
+
+<script>
+// Site do TopKe (fora do Claude): a TV e os celulares conversam por um canal gratuito na internet.
+if (!window.claude) window.claude = { use: async n => n === 'room' ? salaTopKe() : null };
+function salaTopKe(){
+  return new Promise(res => {
+    const s = document.createElement('script');
+    s.src = 'https://unpkg.com/mqtt@5/dist/mqtt.min.js';
+    s.onerror = () => res(null);
+    s.onload = () => {
+      const me = Math.random().toString(36).slice(2, 10), base = 'topke/mv7k2q9xr4/';
+      const c = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', { clientId: 'topke_' + me, clean: true, reconnectPeriod: 3000 });
+      const hs = {};
+      c.on('connect', () => c.subscribe(base + '#'));
+      c.on('message', (t, p) => {
+        const topic = t.slice(base.length); let m; try { m = JSON.parse(p.toString()); } catch(e) { return; }
+        if (!m || m.peer === me) return;
+        (hs[topic] || []).forEach(f => { try { f({ topic, data: m.data, peer: m.peer, sameTab: false, isMe: false }); } catch(e) {} });
+      });
+      res({
+        emit: (t, d) => new Promise((ok, no) => { if (!c.connected) return no(new Error('sem conexão')); c.publish(base + t, JSON.stringify({ peer: me, data: d }), {}, e => e ? no(e) : ok()); }),
+        on: (t, f) => { (hs[t] = hs[t] || []).push(f); return () => {}; },
+        presence: () => Promise.resolve(),
+        onPeers: () => () => {}
+      });
+    };
+    document.head.appendChild(s);
+  });
+}
+</script>
+<script>
+const SONGS = [];
+const $ = id => document.getElementById(id);
+const v = $('v');
+const byN = n => SONGS.find(s => s.n === n);
+const fmt = t => { t = Math.max(0, t | 0); return (t / 60 | 0) + ':' + String(t % 60).padStart(2, '0'); };
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),1800); }
+const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let current = null, curWho = '', fila = [], nomes = [];
+try { fila = JSON.parse(localStorage.getItem('ikq') || '[]').map(x => typeof x === 'number' ? {n:x, who:''} : x).filter(x => x && byN(x.n)); } catch(e) {}
+try { nomes = JSON.parse(localStorage.getItem('ikn') || '[]'); } catch(e) {}
+const save = () => { try { localStorage.setItem('ikq', JSON.stringify(fila)); } catch(e) {} };
+const saveNomes = () => { try { localStorage.setItem('ikn', JSON.stringify(nomes)); } catch(e) {} };
+function lembrar(nome){ if (!nome) return; nomes = [nome, ...nomes.filter(x => x.toLowerCase() !== nome.toLowerCase())].slice(0, 200); saveNomes(); }
+const tag = w => w ? ' — ' + w : '';
+
+// Escolher quem canta: nomes salvos aparecem como botões; digitando, filtra; nome novo vira botão "+ Nome".
+let whoCb = null;
+const norm = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function pedirNome(n, cb){ pedirNomeT(byN(n).t, cb); }
+function pedirNomeT(titulo, cb){
+  whoCb = cb; $('whoSong').textContent = titulo; $('whoQ').value = ''; renderWho(); $('who').showModal();
+}
+function renderWho(){
+  const q = $('whoQ').value.trim(), ql = norm(q);
+  const list = nomes.filter(x => !ql || norm(x).includes(ql));
+  const exato = nomes.some(x => norm(x) === ql);
+  $('whoList').innerHTML = list.map(x => `<button class="chip" data-who="${esc(x)}">${esc(x)}</button>`).join('') +
+    (q && !exato ? `<button class="chip new" data-who="${esc(q)}">+ ${esc(q)}</button>` : '') +
+    (!q && !nomes.length ? '<span class="note">Digite o nome. Ele fica salvo para a próxima vez.</span>' : '');
+}
+function escolher(nome){ $('who').close(); lembrar(nome); const cb = whoCb; whoCb = null; if (cb) cb(nome); }
+$('whoQ').addEventListener('input', renderWho);
+$('whoQ').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const q = $('whoQ').value.trim(); const m = nomes.find(x => norm(x) === norm(q)) || (q && nomes.find(x => norm(x).includes(norm(q)))); escolher(m || q); } });
+$('whoList').addEventListener('click', e => { const b = e.target.closest('[data-who]'); if (b) escolher(b.dataset.who); });
+$('whoNo').onclick = () => escolher('');
+$('whoX').onclick = () => { whoCb = null; $('who').close(); };
+
+function play(n, who){
+  const s = byN(n); current = s; curWho = who || '';
+  v.controls = true; au.src = s.au; v.src = s.src; modoSom(); if (ajuste !== 0) { au.currentTime = Math.max(0, ajuste); au.play().catch(()=>{}); } v.poster = s.c; $('empty').hidden = true; $('tvbtn').hidden = false;
+  v.play().catch(()=>{});
+  if (curWho) vez(curWho, s.t);
+  renderNow(); renderLib();
+}
+// Na tela do vídeo: "Vez de Fulano!" grande por alguns segundos quando começa a música.
+function vez(nome, musica){
+  const el = $('vez'); $('vezT').textContent = 'Vez de ' + nome + '!'; $('vezS').textContent = musica;
+  el.classList.add('on'); clearTimeout(el._h); el._h = setTimeout(() => el.classList.remove('on'), 4000);
+}
+// Modo TV: o vídeo ocupa a tela toda (para espelhar), mantendo o nome e a fila por cima.
+$('tvbtn').onclick = () => { const on = document.body.classList.toggle('tvmode'); $('tvbtn').textContent = on ? '✕ Sair do Modo TV' : '⛶ Modo TV'; };
+function nextSong(){ if (!fila.length) return; const x = fila.shift(); save(); renderQueue(); play(x.n, x.who); }
+// Som separado do vídeo: permite adiantar o som quando a caixa Bluetooth atrasa.
+// O vídeo (com a letra) toca mudo; o áudio segue o vídeo + o ajuste.
+const au = $('au');
+let ajuste = 0; try { ajuste = +localStorage.getItem('iksync') || 0; } catch(e) {}
+function showAjuste(){ $('syncVal').textContent = (ajuste > 0 ? '+' : '') + ajuste.toFixed(1).replace('.', ',') + ' s'; }
+function mudaAjuste(d){ ajuste = Math.round(Math.max(-1, Math.min(1.5, ajuste + d)) * 10) / 10; try { localStorage.setItem('iksync', ajuste); } catch(e) {} showAjuste(); alinha(true); toast(ajuste > 0 ? 'Som adiantado ' + ajuste.toFixed(1).replace('.', ',') + ' s' : ajuste < 0 ? 'Som atrasado' : 'Som sem ajuste'); }
+$('syncMinus').onclick = () => mudaAjuste(-0.1); $('syncPlus').onclick = () => mudaAjuste(0.1);
+showAjuste();
+// Sem ajuste (0): o som sai do próprio vídeo (funciona no AirPlay/TV).
+// Com ajuste: o vídeo fica mudo e o som separado toca adiantado/atrasado (caixa Bluetooth).
+function modoSom(){ const sep = ajuste !== 0; v.muted = sep; if (!sep) au.pause(); }
+function alinha(forca){
+  modoSom();
+  if (ajuste === 0 || !au.src || v.paused) return;
+  const alvo = v.currentTime + ajuste;
+  if (alvo < 0) { if (!au.paused) au.pause(); return; }
+  if (forca || Math.abs(au.currentTime - alvo) > 0.08) au.currentTime = alvo;
+  if (au.paused) au.play().catch(()=>{});
+}
+v.addEventListener('play', () => { $('syncRow').hidden = false; alinha(true); });
+v.addEventListener('playing', () => alinha(true));
+v.addEventListener('pause', () => au.pause());
+v.addEventListener('seeked', () => alinha(true));
+v.addEventListener('waiting', () => au.pause());
+setInterval(() => alinha(false), 400);
+v.addEventListener('ended', () => { if (fila.length) nextSong(); else { current = null; renderNow(); renderLib(); } });
+
+function renderNow(){
+  $('nowT').textContent = current ? current.t + tag(curWho) : 'Nada tocando';
+  $('nextT').textContent = fila.length ? 'A seguir: ' + byN(fila[0].n).t + tag(fila[0].who) : 'Fila vazia';
+  $('next').disabled = !fila.length;
+  // Canto da tela do vídeo: quem canta agora e os próximos 5.
+  $('sing').hidden = !(current && curWho); $('sing').textContent = '🎤 ' + curWho;
+  const prox = fila.slice(0, 5);
+  $('ov').hidden = !current || !prox.length;
+  $('ovList').innerHTML = prox.map(x => `<li>${x.who ? '<b>' + esc(x.who) + '</b> · ' : ''}${esc(byN(x.n).t)}</li>`).join('');
+}
+// Pastas: cada álbum é uma pasta. A busca procura em todas, sem precisar abrir.
+const ALBUMS = [
+  { id: 'mjr', t: 'Milionário e José Rico', by: 'karaokês do YouTube', cover: '', songs: [], yt: [
+    ['Estrada da Vida', 'Rk2eEiAeI9Y', '3:05'], ['Vontade Dividida', 'Gqg0LQ_nc8o', '4:27'], ['Sonhei com Você', '-o_uUt3hOJg', '4:07'],
+    ['Decida', 'Iaek3Vm1NCM', '3:49'], ['Jogo do Amor', 'yeZbV843PlQ', '3:17'], ['A Carta', 'w4_zTT4KOSQ', '4:06'],
+    ['Tribunal do Amor', 'Vr6CVlqDmJA', '3:44'], ['O Último Julgamento', '23sdYCiXCbI', '4:08'], ['Sonho de um Caminhoneiro', 'sBYGJOmGXrc', '3:40'],
+    ['Solidão', '6chcE5o61qM', '4:13'], ['Ilusão Perdida', 'EsbhGKiHa58', '2:59'], ['Quem Disse Que Esqueci', 'k8KWQcdhpk4', '3:32'],
+  ] },
+  { id: 'fjr', t: 'Fábio Jr.', by: 'karaokês do YouTube', cover: '', songs: [], yt: [
+    ['Alma Gêmea', 'Sn_uXRpK4MI', '4:45'], ['20 e Poucos Anos', 'm2oraXqN5uI', '3:35'], ['Caça e Caçador', '37F4OjudWxc', '4:19'],
+    ['Pai', '8oa2ZCLyJ2A', '5:08'], ['Sem Limites pra Sonhar', 'RUWWHDWac5w', '4:17'], ['Enrosca', 'L-gNWi7PDlg', '3:03'],
+    ['Seu Melhor Amigo', '-X3TKdkfan4', '4:47'], ['Eu Me Rendo', 'XjNSgc8fyho', '4:56'], ['O Que É Que Há', 'kM-FWfiqWWY', '3:31'],
+    ['Só Você', 'VSWcPB9dEsM', '3:46'], ['Felicidade', '-0bSqR55LAE', '4:28'],
+  ] },  { id: 'u-raca-negra', t: 'Raça Negra', by: 'karaokês do YouTube', cover: '', songs: [], mine: true, yt: [
+    ['Cheia de Manias', null, '', 'Raça Negra Cheia de Manias karaokê'], ['Cigana', null, '', 'Raça Negra Cigana karaokê'], ['Me Leva Junto com Você', null, '', 'Raça Negra Me Leva Junto com Você karaokê'], ['Quando Te Encontrei', null, '', 'Raça Negra Quando Te Encontrei karaokê'], ['É Tarde Demais', null, '', 'Raça Negra É Tarde Demais karaokê'], ['Doce Paixão', null, '', 'Raça Negra Doce Paixão karaokê'], ['Deus Me Livre', null, '', 'Raça Negra Deus Me Livre karaokê'], ['Jeito Felino', null, '', 'Raça Negra Jeito Felino karaokê'], ['Ciúme de Você', null, '', 'Raça Negra Ciúme de Você karaokê'], ['Preciso Ter Alguém', null, '', 'Raça Negra Preciso Ter Alguém karaokê'], ['Maravilha', null, '', 'Raça Negra Maravilha karaokê'], ['Te Quero Comigo', null, '', 'Raça Negra Te Quero Comigo karaokê']
+  ] },
+  { id: 'u-henrique-e-juliano', t: 'Henrique & Juliano', by: 'karaokês do YouTube', cover: '', songs: [], mine: true, yt: [
+    ['Cuida Bem Dela', null, '', 'Henrique & Juliano Cuida Bem Dela karaokê'], ['Até Você Voltar', null, '', 'Henrique & Juliano Até Você Voltar karaokê'], ['A Flor e o Beija-Flor', null, '', 'Henrique & Juliano A Flor e o Beija-Flor karaokê'], ['Recaídas', null, '', 'Henrique & Juliano Recaídas karaokê'], ['Na Hora da Raiva', null, '', 'Henrique & Juliano Na Hora da Raiva karaokê'], ['Vidinha de Balada', null, '', 'Henrique & Juliano Vidinha de Balada karaokê'], ['Arranhão', null, '', 'Henrique & Juliano Arranhão karaokê'], ['Mudando de Assunto', null, '', 'Henrique & Juliano Mudando de Assunto karaokê'], ['Liberdade Provisória', null, '', 'Henrique & Juliano Liberdade Provisória karaokê'], ['Aquela Pessoa', null, '', 'Henrique & Juliano Aquela Pessoa karaokê']
+  ] },
+  { id: 'u-marilia-mendonca', t: 'Marília Mendonça', by: 'karaokês do YouTube', cover: '', songs: [], mine: true, yt: [
+    ['Infiel', null, '', 'Marília Mendonça Infiel karaokê'], ['Eu Sei de Cor', null, '', 'Marília Mendonça Eu Sei de Cor karaokê'], ['Alô Porteiro', null, '', 'Marília Mendonça Alô Porteiro karaokê'], ['Amante Não Tem Lar', null, '', 'Marília Mendonça Amante Não Tem Lar karaokê'], ['Supera', null, '', 'Marília Mendonça Supera karaokê'], ['Graveto', null, '', 'Marília Mendonça Graveto karaokê'], ['Todo Mundo Vai Sofrer', null, '', 'Marília Mendonça Todo Mundo Vai Sofrer karaokê'], ['Ciumeira', null, '', 'Marília Mendonça Ciumeira karaokê'], ['Bebi Liguei', null, '', 'Marília Mendonça Bebi Liguei karaokê'], ['Sentimento Louco', null, '', 'Marília Mendonça Sentimento Louco karaokê'], ['De Quem É a Culpa', null, '', 'Marília Mendonça De Quem É a Culpa karaokê'], ['Esqueça-me Se For Capaz', null, '', 'Marília Mendonça Esqueça-me Se For Capaz karaokê']
+  ] },
+];
+let aberta = null;
+// Músicas que tocam no YouTube: o app só guarda o link; tocar abre o app do YouTube (que já manda para a TV).
+const hue = t => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const ytTile = (y, al, i) => `<li class="tile"><div class="ytph" style="--h:${(hue(al.t) + hue(y[0]) % 120) % 360}"><span>${esc(y[0])}</span><small>${esc(al.t)}</small>${i != null && i < 10 ? `<em class="rank">#${i + 1}</em>` : ''}</div>
+  <div class="tt">${esc(y[0])}</div><div class="du">${y[2] ? y[2] + ' · ' : ''}YouTube</div>
+  <div class="bt">${y[1] ? `<button class="ic yt" data-ytnow="${y[1]}" data-ytt2="${esc(y[0])}" data-ytd="${y[2] || ''}">▶ Agora</button>` : `<a class="ic yt" href="${ytUrl(y[1], y[3])}" target="_blank" rel="noopener">▶ Agora</a>`}<button class="ic add" data-yt="${y[1] || ''}" data-ytq="${esc(y[3] || '')}" data-ytt="${esc(y[0])}" data-ytd="${y[2] || ''}">+ Fila</button></div></li>`;
+// Com o código do vídeo abre direto; sem ele (pastas montadas pela busca) abre a busca do karaokê no YouTube.
+const ytUrl = (id, q) => id ? 'https://www.youtube.com/watch?v=' + id : 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q);
+// Pastas montadas pela busca ficam salvas no celular.
+let minhas = []; try { minhas = JSON.parse(localStorage.getItem('ikalb') || '[]'); } catch(e) {}
+const saveMinhas = () => { try { localStorage.setItem('ikalb', JSON.stringify(minhas)); } catch(e) {} };
+minhas.forEach(a => { if (!ALBUMS.some(b => b.t.toLowerCase() === a.t.toLowerCase())) ALBUMS.push(a); });
+// Pastas apagadas (inclusive as que vieram prontas) ficam guardadas para não voltarem.
+let apagadas = []; try { apagadas = JSON.parse(localStorage.getItem('ikdel') || '[]'); } catch(e) {}
+for (let i = ALBUMS.length - 1; i >= 0; i--) if (apagadas.includes(ALBUMS[i].id)) ALBUMS.splice(i, 1);
+// Sem músicas guardadas no app: some o player do app (tudo toca pelo YouTube).
+const temLocal = () => ALBUMS.some(a => a.songs.length);
+function ajustaTela(){ const l = temLocal(); document.querySelector('.player').hidden = !l; document.querySelector('.now').hidden = !l; if (!l) $('syncRow').hidden = true; if ($('cast')) $('cast').hidden = !l; }
+let montando = false;
+let ctlMontar = null;
+async function montarPasta(nome){
+  if (montando) return;
+  nome = nome.replace(/(^|\s)(karaok[eê]s?|playback)(?=\s|$)/gi, ' ').replace(/\s+/g, ' ').trim() || nome;
+  const sample = window.claude ? await claude.use('sample') : null;
+  if (!sample) { window.open(ytUrl(null, nome + ' karaokê'), '_blank'); return; }
+  montando = true;
+  // Mostrador: deixa claro que está trabalhando (não travou), com os segundos passando.
+  $('loadT').textContent = 'Montando a pasta "' + nome + '"…'; $('load').hidden = false;
+  const t0 = Date.now(), passos = ['Procurando o cantor', 'Separando as músicas mais conhecidas', 'Preparando os karaokês'];
+  const tick = setInterval(() => { const sg = Math.floor((Date.now() - t0) / 1000); $('loadS').textContent = passos[Math.min(2, Math.floor(sg / 4))] + '… ' + sg + ' s' + (sg >= 8 ? ' — se aparecer um aviso do Claude pedindo permissão, toque em Permitir.' : ''); }, 500);
+  try {
+    ctlMontar = new AbortController(); const limite = setTimeout(() => ctlMontar.abort(), 90000);
+    const r = await sample.json('Você ajuda um app de karaokê. O usuário digitou: "' + nome + '". Se for um cantor, cantora, dupla ou banda que existe, responda SOMENTE com JSON: {"artista": "nome correto do artista", "musicas": ["entre 20 e 25 títulos de músicas dele EM ORDEM DE POPULARIDADE: a primeira é a mais tocada/famosa de todas, depois a segunda mais tocada, e assim por diante; sem repetir, só títulos reais"]}. Se não for um artista conhecido, responda {"artista": "", "musicas": []}. Não invente músicas.', { modelTier: 'default', signal: ctlMontar.signal }).finally(() => clearTimeout(limite));
+    const art = (r && r.artista || '').trim(), mus = (r && Array.isArray(r.musicas) ? r.musicas : []).filter(Boolean).slice(0, 25);
+    if (!art || !mus.length) { toast('Não achei esse cantor. Confira o nome.'); renderLib(); return; }
+    const id = 'u-' + art.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-');
+    const old = ALBUMS.findIndex(a => a.id === id); if (old >= 0) ALBUMS.splice(old, 1);
+    const al = { id, t: art, by: 'karaokês do YouTube', cover: '', songs: [], mine: true, yt: mus.map(m => [m, null, '', art + ' ' + m + ' karaokê']) };
+    ALBUMS.push(al); minhas = minhas.filter(a => a.id !== id).concat([al]); saveMinhas();
+    $('q').value = ''; aberta = id; renderLib(); toast('Pasta ' + art + ' pronta!');
+  } catch (e) {
+    const code = e && e.code;
+    if (code === 'not_granted') toast('Precisa permitir o Claude para montar a pasta.');
+    else if (code === 'aborted' || (e && e.name === 'AbortError') || ctlMontar?.signal.aborted) {
+      // Demorou demais ou cancelou: oferece abrir a busca direto no YouTube.
+      $('crumb').innerHTML = `<div class="crumb"><span>Não deu para montar a pasta agora.</span></div><a class="btn mk" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="${ytUrl(null, nome + ' karaokê')}" target="_blank" rel="noopener">▶ Procurar "${esc(nome)}" direto no YouTube</a>`;
+      $('lib').innerHTML = ''; return;
+    } else toast('Não consegui montar agora. Tente de novo.');
+    renderLib();
+  } finally { montando = false; clearInterval(tick); $('load').hidden = true; }
+}
+// Fila do YouTube: guardada no celular; "Mandar" abre todas em sequência no YouTube.
+let ytFila = []; try { ytFila = JSON.parse(localStorage.getItem('ikyt') || '[]'); } catch(e) {}
+// ---------- TV + controle remoto ----------
+// Uma tela é a TV (toca o vídeo e manda na fila); os celulares viram controle: pedem músicas e mostram a fila da TV.
+let souTV = false; try { souTV = localStorage.getItem('ikrole') === 'tv'; } catch(e) {}
+let sala = null, tvPeer = null, tvVisto = 0, filaLocal = null, estadoT = null;
+const remoto = () => !souTV && !!sala && !!tvPeer && Date.now() - tvVisto < 15000;
+let kSeq = Date.now();
+const novaK = () => 'k' + (kSeq++).toString(36) + Math.random().toString(36).slice(2, 5);
+ytFila.forEach(x => { if (!x.k) x.k = novaK(); });
+const idOk = id => typeof id === 'string' && /^[\w-]{6,20}$/.test(id) ? id : null;
+const txt = (t, n) => String(t == null ? '' : t).slice(0, n || 80);
+function fazer(op, a){
+  if (remoto()) { sala.emit('pedido', { op, a: a || {} }).catch(() => toast('Não chegou na TV. Tente de novo.')); if (op !== 'add') toast('Mandado para a TV'); return; }
+  aplicar(op, a || {});
+}
+function aplicar(op, a){
+  const idx = k => ytFila.findIndex(x => x.k === k);
+  if (op === 'add') {
+    if (a.k && idx(a.k) >= 0) return;
+    const id = idOk(a.id);
+    ytFila.push({ k: typeof a.k === 'string' ? a.k.slice(0, 20) : novaK(), id, q: id ? null : txt(a.q, 120) || null, t: txt(a.t), who: txt(a.who, 40), d: txt(a.d, 8) });
+    saveYt(); renderYt(); if (!ytNow && id) proximaYt();
+  }
+  else if (op === 'now') { const id = idOk(a.id); if (id) tocarAgoraYt(id, txt(a.t), txt(a.who, 40), txt(a.d, 8)); }
+  else if (op === 'rm') { const i = idx(a.k); if (i >= 0) { ytFila.splice(i, 1); saveYt(); renderYt(); } }
+  else if (op === 'up') { const i = idx(a.k); if (i > 0) { [ytFila[i-1], ytFila[i]] = [ytFila[i], ytFila[i-1]]; saveYt(); renderYt(); } }
+  else if (op === 'clear') { ytFila = ytFila.filter(x => !x.sent); saveYt(); renderYt(); }
+  else if (op === 'skip') { ytAcabou = ytNow ? ytNow.id : ''; proximaYt(); }
+  else if (op === 'stop') { ytPost('stopVideo'); clearTimeout(ytDurT); ytNow = null; renderYt(); }
+  else if (op === 'start') { if (!ytNow) proximaYt(); }
+}
+// A TV avisa a todos como está a fila (estado completo, várias vezes, porque mensagens podem se perder).
+function mandaEstado(){
+  if (!souTV || !sala) return;
+  clearTimeout(estadoT);
+  estadoT = setTimeout(() => {
+    const fila = ytFila.filter(x => !x.sent).slice(0, 30).map(x => ({ k: x.k, id: x.id, t: x.t, who: x.who, d: x.d }));
+    let data = { fila, now: ytNow ? { id: ytNow.id, t: ytNow.t, who: ytNow.who } : null, sinal: ytSinal };
+    while (JSON.stringify(data).length > 3500 && data.fila.length) data.fila.pop();
+    sala.emit('estado', data).catch(() => {});
+  }, 150);
+}
+function recebeEstado(m){
+  if (souTV || m.sameTab || !m.data || !Array.isArray(m.data.fila)) return;
+  const eraRemoto = remoto();
+  tvPeer = m.peer; tvVisto = Date.now();
+  if (!eraRemoto) {
+    filaLocal = ytFila;
+    ytPost('stopVideo'); clearTimeout(ytDurT);
+    toast('📺 TV conectada: o celular agora é o controle');
+  }
+  ytFila = m.data.fila.slice(0, 30).map(x => ({ k: txt(x && x.k, 20), id: idOk(x && x.id), t: txt(x && x.t), who: txt(x && x.who, 40), d: txt(x && x.d, 8) }));
+  const n = m.data.now;
+  ytNow = n && idOk(n.id) ? { id: n.id, t: txt(n.t), who: txt(n.who, 40) } : null;
+  ytSinal = !!m.data.sinal;
+  renderYt(); marcaTv();
+}
+function tvSumiu(){
+  if (souTV || !tvPeer) return;
+  tvPeer = null; ytNow = null;
+  ytFila = filaLocal || ytFila; filaLocal = null;
+  renderYt(); marcaTv(); toast('A TV saiu. A fila volta a ficar no celular.');
+}
+function marcaTv(){
+  const b = $('souTv'); if (!b) return;
+  document.body.classList.toggle('souTV', souTV);
+  if (souTV) b.textContent = '✕ Sair do modo TV';
+  else if (remoto()) b.textContent = '📺 TV conectada';
+  else b.textContent = '📺 Esta tela é a TV';
+  b.dataset.on = (souTV || remoto()) ? '1' : '0';
+  $('tvIdle').hidden = !souTV || !!ytNow;
+  if (souTV) {
+    const prox = ytFila.filter(x => !x.sent && x.id).slice(0, 6);
+    $('tvIdleL').innerHTML = prox.length ? prox.map(x => `<li>${x.who ? '<b>' + esc(x.who) + '</b> · ' : ''}${esc(x.t)}</li>`).join('') : '';
+    $('tvIdleS').textContent = prox.length ? 'Aperte OK no controle da TV para começar' : 'Escolha as músicas no celular (abra o TopKe nele)';
+  }
+}
+const saveYt = () => { if (remoto()) return; try { localStorage.setItem('ikyt', JSON.stringify(ytFila)); } catch(e) {} };
+function renderYt(){
+  const pend = ytFila.filter(x => !x.sent);
+  $('ytBox').hidden = !ytFila.length;
+  $('ytq').innerHTML = ytFila.map((x, i) => `<li class="row ${x.sent ? 'sent' : ''}"><span class="qn">${x.sent ? '✓' : i + 1}</span>
+    <div class="t"><div>${esc(x.t)}</div><span>${x.who ? '<span class="who">' + esc(x.who) + '</span> · ' : ''}${x.sent ? 'já cantou' : x.id ? 'na fila' : 'abre no YouTube'}</span></div>${!x.sent && !x.id && x.q ? `<a class="ic yt" data-ytopen="${i}" href="${ytUrl(null, x.q)}" target="_blank" rel="noopener">▶ Abrir</a>` : ''}
+    ${!x.sent && i && !ytFila[i-1].sent ? `<button class="ic" data-ytup="${i}" aria-label="Subir">↑</button>` : ''}<button class="ic x" data-ytrm="${i}" aria-label="Tirar">✕</button></li>`).join('');
+  $('ytStart').hidden = !!ytNow || !pend.some(x => x.id);
+  renderYtPlayer();
+  $('qc').textContent = fila.length + pend.length;
+  $('qEmpty').hidden = fila.length > 0 || ytFila.length > 0;
+  if (typeof mandaEstado === 'function') { mandaEstado(); marcaTv(); }
+}
+const allYt = () => ALBUMS.flatMap(a => (a.yt || []).map(y => [y, a]));
+// ---------- Player oficial do YouTube dentro do app ----------
+// O vídeo toca no player embutido do YouTube (com anúncios). Quando acaba, a próxima da fila começa sozinha.
+// Nomes e fila ficam FORA do vídeo, embaixo (ou ao lado, no Modo TV deitado).
+let ytNow = null, ytReady = false, ytAcabou = '', ytTimer = null, ytSinal = false, ytDurT = null;
+const seg = d => { const m = String(d || '').match(/^(\d+):(\d\d)$/); return m ? +m[1] * 60 + +m[2] : 0; };
+// Plano B: se o player não mandar o aviso de "acabou" (às vezes no AirPlay), passa pela duração da música.
+function ytPlanoB(d){
+  clearTimeout(ytDurT); const s2 = seg(d); if (!s2) return;
+  const id = ytNow && ytNow.id;
+  ytDurT = setTimeout(() => { if (ytNow && ytNow.id === id && ytAcabou !== id) { ytAcabou = id; proximaYt(); } }, (s2 + 6) * 1000);
+}
+function ytPost(func, args){ try { $('ytf').contentWindow.postMessage(JSON.stringify({ event: 'command', func, args: args || [] }), '*'); } catch(e) {} }
+function ytLoad(id){
+  const f = $('ytf'); ytAcabou = '';
+  if (!ytReady) {
+    f.src = 'https://www.youtube.com/embed/' + id + '?enablejsapi=1&autoplay=1&playsinline=1&rel=0&origin=' + encodeURIComponent(location.origin);
+    clearTimeout(ytTimer); ytTimer = setTimeout(() => { if (!ytReady) toast('O player não respondeu. Toque em YouTube para abrir lá.'); }, 12000);
+  } else { ytPost('loadVideoById', [id]); }
+}
+$('ytf').addEventListener('load', () => {
+  try { $('ytf').contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*'); } catch(e) {}
+  ytPost('addEventListener', ['onStateChange']); ytPost('addEventListener', ['onError']);
+});
+window.addEventListener('message', e => {
+  let host = ''; try { host = new URL(e.origin).hostname; } catch(_) {}
+  if (!/(^|\.)youtube(-nocookie)?\.com$/.test(host)) return;
+  let d; try { d = typeof e.data === 'string' ? JSON.parse(e.data) : e.data; } catch(_) { return; }
+  if (!d || !d.event) return;
+  if (d.event === 'onReady' || d.event === 'initialDelivery' || d.event === 'infoDelivery') ytReady = true;
+  const st = d.event === 'onStateChange' ? d.info : (d.event === 'infoDelivery' && d.info ? d.info.playerState : undefined);
+  if (st !== undefined && st !== -1) { if (!ytSinal) { ytSinal = true; renderYtPlayer(); } }
+  if (st === 0 && ytNow && ytAcabou !== ytNow.id) { ytAcabou = ytNow.id; proximaYt(); }
+  if (d.event === 'onError') erroYt();
+});
+function proximaYt(){
+  if (remoto()) return;
+  const i = ytFila.findIndex(x => !x.sent && x.id);
+  if (i < 0) { ytNow = null; clearTimeout(ytDurT); ytPost('stopVideo'); renderYt(); toast('A fila acabou.'); return; }
+  const x = ytFila[i]; x.sent = true; saveYt();
+  ytNow = { id: x.id, t: x.t, who: x.who }; $('ytp').hidden = false; ytLoad(x.id); ytPlanoB(x.d); renderYt();
+  if (x.who) toast('Vez de ' + x.who + '!');
+}
+function tocarAgoraYt(id, t, who, d){
+  // Se a mesma música já estava na fila, marca como cantada para não repetir.
+  const i = ytFila.findIndex(x => !x.sent && x.id === id); if (i >= 0) { ytFila[i].sent = true; saveYt(); }
+  ytNow = { id, t, who }; $('ytp').hidden = false; ytLoad(id); ytPlanoB(d); renderYt();
+}
+function erroYt(){
+  const t = ytNow; if (!t) return;
+  toast('"' + t.t + '" não deixa tocar fora do YouTube. Pulando…');
+  ytFila.push({ id: null, q: t.t + ' karaokê', t: t.t, who: t.who }); saveYt();
+  ytAcabou = t.id; proximaYt();
+}
+function renderYtPlayer(){
+  $('ytp').hidden = !ytNow;
+  $('ytp').classList.toggle('remoto', remoto());
+  if (!ytNow) { $('ytp').classList.remove('tv'); return; }
+  if (souTV) $('ytp').classList.add('tv');
+  $('ytNow').innerHTML = '🎤 ' + (ytNow.who ? '<b>' + esc(ytNow.who) + '</b> — ' : '') + esc(ytNow.t);
+  const prox = ytFila.filter(x => !x.sent && x.id).slice(0, 5);
+  $('ytNext').innerHTML = prox.map(x => `<li>${x.who ? '<b>' + esc(x.who) + '</b> · ' : ''}${esc(x.t)}</li>`).join('') || '<li style="list-style:none;margin-left:-20px;color:var(--muted)">Fila vazia — escolha a próxima em + Fila</li>';
+  $('ytOpen').href = ytUrl(ytNow.id);
+  $('ytSig').textContent = remoto() ? '📺 Tocando na TV. Daqui você controla a fila.' : ytSinal ? '● player conectado: a próxima entra sozinha' : '○ sem sinal do player: a próxima entra pelo tempo da música';
+  $('ytSig').style.color = ytSinal ? '#5fd38a' : 'var(--muted)';
+}
+$('ytSkip').onclick = () => fazer('skip');
+$('ytStop').onclick = () => fazer('stop');
+$('ytTv').onclick = () => { const on = $('ytp').classList.toggle('tv'); $('ytTv').textContent = on ? '✕ Sair do Modo TV' : '⛶ Modo TV'; };
+$('ytStart').onclick = () => fazer('start');
+const tile = s => `<li class="tile ${current&&current.n===s.n?'playing':''}"><img src="${s.c}" alt="">
+  <div class="tt">${esc(s.t)}</div><div class="du">${fmt(s.d)}</div>
+  <div class="bt"><button class="ic" data-play="${s.n}">Cantar</button><button class="ic add" data-add="${s.n}">+ Fila</button></div></li>`;
+function renderLib(){
+  const q = $('q').value.trim().toLowerCase();
+  $('voltar').hidden = !(aberta && !q);
+  if (q) {
+    const vis = new Set(ALBUMS.flatMap(a => a.songs));
+    const list = SONGS.filter(s => vis.has(s.n) && (s.t.toLowerCase().includes(q) || s.q.includes(q)));
+    const yts = allYt().filter(([y, a]) => y[0].toLowerCase().includes(q) || a.t.toLowerCase().includes(q));
+    const tot = list.length + yts.length;
+    $('crumb').innerHTML = `<div class="crumb"><span>${tot} encontrada${tot === 1 ? '' : 's'}</span></div>`;
+    const raw = $('q').value.trim();
+    const temPasta = ALBUMS.some(a => a.t.toLowerCase() === q);
+    const mk = raw.length >= 3 && !temPasta ? `<li style="grid-column:1/-1"><button class="btn mk" data-mk="${esc(raw)}">🔎 Montar pasta "${esc(raw)}" com karaokês do YouTube</button></li>` : '';
+    $('lib').innerHTML = mk + ((list.map(tile).join('') + yts.map(([y, a]) => ytTile(y, a)).join('')) || '<li class="note" style="grid-column:1/-1">Nenhuma música encontrada nas pastas.</li>');
+    return;
+  }
+  const al = ALBUMS.find(a => a.id === aberta);
+  if (!al) {
+    $('crumb').innerHTML = '';
+    $('lib').innerHTML = ALBUMS.map(a => `<li><button class="album" data-album="${a.id}" style="width:100%">
+      ${a.cover ? `<img src="${a.cover}" alt="">` : `<div class="ph" style="--h:${hue(a.t)}">${esc(a.t)}</div>`}
+      <b>📁 ${esc(a.t)}</b><span>${(a.songs.length || (a.yt||[]).length) ? (a.songs.length || a.yt.length) + ' músicas · ' + esc(a.by) : 'Em breve'}</span></button></li>`).join('')
+      || '<li class="note" style="grid-column:1/-1">Nenhuma pasta ainda. Digite um cantor na busca e toque em 🔎 Montar pasta.</li>';
+    return;
+  }
+  $('crumb').innerHTML = `<div class="crumb"><button data-back="1">‹ Pastas</button><div><b>${esc(al.t)}</b><br><span>${al.yt ? al.yt.length + ' músicas · mais tocadas primeiro' : al.songs.length + ' músicas'}</span></div></div>`
+    + (al.yt ? '<p class="note" style="margin:6px 0 0"><b>▶ Agora</b> toca aqui no TopKe. <b>+ Fila</b> entra na fila com o nome de quem canta, e a próxima começa sozinha.' + (al.mine ? ' Esta pasta foi montada pela busca: cada música abre a busca do karaokê no YouTube; toque no primeiro vídeo.' : '') + '</p>' : '')
+    + (al.mine ? `<button class="btn" data-mk="${esc(al.t)}" style="margin:6px 6px 0 0">🔄 Buscar mais músicas</button>` : '')
+    + `<button class="btn" data-del="${al.id}" style="margin-top:6px">🗑 Apagar pasta</button>`;
+  $('lib').innerHTML = (al.songs.map(n => tile(byN(n))).join('') + (al.yt || []).map((y, i) => ytTile(y, al, i)).join(''))
+    || '<li class="note" style="grid-column:1/-1">As músicas dessa pasta entram aqui quando estiverem liberadas (licença).</li>';
+}
+function renderQueue(){
+  $('queue').innerHTML = fila.map((x, i) => { const s = byN(x.n); return `<li class="row"><span class="qn">${i+1}</span><img src="${s.c}" alt="">
+    <div class="t"><div>${s.t}</div><span>${x.who ? '<span class="who">' + esc(x.who) + '</span> · ' : ''}${fmt(s.d)}</span></div>
+    ${i ? `<button class="ic" data-up="${i}" aria-label="Subir na fila">↑</button>` : ''}<button class="ic x" data-rm="${i}" aria-label="Tirar da fila">✕</button></li>`; }).join('');
+  $('qEmpty').hidden = fila.length > 0; $('qc').textContent = fila.length; renderNow(); if (typeof renderYt === 'function') renderYt();
+}
+function tab(s){ $('tabS').setAttribute('aria-selected', String(s)); $('tabQ').setAttribute('aria-selected', String(!s)); $('pS').hidden = !s; $('pQ').hidden = s; $('voltar').hidden = !s || !aberta || !!$('q').value.trim(); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.play) { const n = +b.dataset.play; pedirNome(n, who => play(n, who)); }
+  else if (b.dataset.add) { const n = +b.dataset.add; pedirNome(n, who => { if (!current) { play(n, who); } else { fila.push({n, who}); save(); renderQueue(); toast('Na fila: ' + byN(n).t + tag(who)); } }); }
+  else if (b.dataset.album) { aberta = b.dataset.album; renderLib(); }
+  else if (b.dataset.back) { aberta = null; renderLib(); }
+  else if (b.dataset.ytnow) { const id = b.dataset.ytnow, t = b.dataset.ytt2, d = b.dataset.ytd || ''; pedirNomeT(t, who => fazer('now', { id, t, who, d })); }
+  else if (b.dataset.mk) { montarPasta(b.dataset.mk); }
+  else if (b.dataset.del) { const id = b.dataset.del; if (!b.dataset.ok) { b.dataset.ok = '1'; b.textContent = '🗑 Toque de novo para apagar'; setTimeout(() => { delete b.dataset.ok; b.textContent = '🗑 Apagar pasta'; }, 3000); return; } if (!apagadas.includes(id)) { apagadas.push(id); try { localStorage.setItem('ikdel', JSON.stringify(apagadas)); } catch(e) {} } const i = ALBUMS.findIndex(a => a.id === id); if (i >= 0) ALBUMS.splice(i, 1); minhas = minhas.filter(a => a.id !== id); saveMinhas(); aberta = null; renderLib(); }
+  else if (b.dataset.ytt !== undefined && b.dataset.yt !== undefined) { const id = b.dataset.yt || null, q = b.dataset.ytq || null, t = b.dataset.ytt, d = b.dataset.ytd || ''; pedirNomeT(t, who => { const r = remoto(); fazer('add', { k: novaK(), id, q, t, who, d }); toast((r ? 'Mandado para a TV: ' : 'Na fila: ') + t + tag(who)); }); }
+  else if (b.dataset.ytrm) { const x = ytFila[+b.dataset.ytrm]; if (x) fazer('rm', { k: x.k }); }
+  else if (b.dataset.ytup) { const x = ytFila[+b.dataset.ytup]; if (x) fazer('up', { k: x.k }); }
+  else if (b.id === 'ytClear') { fazer('clear'); }
+  else if (b.dataset.rm) { fila.splice(+b.dataset.rm, 1); save(); renderQueue(); }
+  else if (b.dataset.up) { const i = +b.dataset.up; [fila[i-1], fila[i]] = [fila[i], fila[i-1]]; save(); renderQueue(); }
+});
+$('tabS').onclick = () => tab(true); $('tabQ').onclick = () => tab(false);
+$('q').addEventListener('input', renderLib);
+$('next').onclick = nextSong;
+$('loadX').onclick = () => ctlMontar && ctlMontar.abort();
+ajustaTela();
+$('voltar').onclick = () => { aberta = null; renderLib(); $('q').scrollIntoView({behavior:'smooth', block:'start'}); };
+renderYt();
+document.addEventListener('click', e => { const a = e.target.closest('a[data-ytopen]'); if (!a) return; const x = ytFila[+a.dataset.ytopen]; if (x) { x.sent = true; saveYt(); setTimeout(renderYt, 300); } });
+$('empty').onclick = () => { $('lib').scrollIntoView({behavior:'smooth', block:'start'}); toast('Escolha a música e toque em Cantar'); };
+$('dlgOk').onclick = () => $('dlg').close();
+
+// Botão TV: abre o seletor de AirPlay (iPhone) ou de transmissão (Android); se o aparelho não deixar, mostra o passo a passo.
+if ($('cast')) $('cast').onclick = async () => {
+  if (!current) { toast('Escolha uma música primeiro'); return; }
+  try {
+    if (v.webkitShowPlaybackTargetPicker) { v.webkitShowPlaybackTargetPicker(); return; }
+    if (v.remote && v.remote.prompt) { await v.remote.prompt(); return; }
+  } catch (e) {}
+  $('dlg').showModal();
+};
+v.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', () => {
+  const on = v.webkitCurrentPlaybackTargetIsWireless; if (!$('cast')) return; $('cast').dataset.on = on ? '1' : '0'; $('castTxt').textContent = on ? 'Na TV' : 'TV';
+});
+if (v.remote && $('cast')) { v.remote.onconnect = () => { $('cast').dataset.on = '1'; $('castTxt').textContent = 'Na TV'; }; v.remote.ondisconnect = () => { $('cast').dataset.on = '0'; $('castTxt').textContent = 'TV'; }; }
+
+renderLib(); renderQueue();
+$('souTv').onclick = () => {
+  if (remoto()) { toast('A TV está tocando. Escolha as músicas aqui no celular.'); return; }
+  souTV = !souTV; try { localStorage.setItem('ikrole', souTV ? 'tv' : ''); } catch(e) {}
+  if (sala) sala.presence({ role: souTV ? 'tv' : null }).catch(() => {});
+  if (souTV) { toast('Esta tela agora é a TV'); if (!ytNow) proximaYt(); }
+  else { $('ytp').classList.remove('tv'); }
+  renderYt(); marcaTv();
+};
+$('tvGo').onclick = () => { if (!ytNow) proximaYt(); };
+marcaTv();
+(async () => {
+  const r = window.claude ? await claude.use('room').catch(() => null) : null;
+  if (!r) return;
+  sala = r;
+  if (souTV) r.presence({ role: 'tv' }).catch(() => {});
+  r.on('estado', recebeEstado);
+  r.on('pedido', m => { if (!souTV || !m.data || typeof m.data.op !== 'string') return; aplicar(m.data.op, m.data.a && typeof m.data.a === 'object' ? m.data.a : {}); mandaEstado(); });
+  r.onPeers(ch => {
+    if (souTV && ch.joined.some(p => !p.sameTab)) mandaEstado();
+    if (tvPeer && ch.left.some(p => p.peer === tvPeer)) tvSumiu();
+  });
+  setInterval(() => { if (souTV) mandaEstado(); else if (tvPeer && Date.now() - tvVisto > 15000) tvSumiu(); }, 4000);
+  if (souTV) mandaEstado();
+})();
+</script>
+
+</body></html>
